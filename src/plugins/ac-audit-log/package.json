@@ -1,0 +1,61 @@
+{
+  "version": "0.0.0",
+  "keywords": [],
+  "type": "commonjs",
+  "exports": {
+    "./package.json": "./package.json",
+    "./strapi-admin": {
+      "source": "./admin/src/index.js",
+      "import": "./dist/admin/index.mjs",
+      "require": "./dist/admin/index.js",
+      "default": "./dist/admin/index.js"
+    },
+    "./strapi-server": {
+      "source": "./server/src/index.js",
+      "import": "./dist/server/index.mjs",
+      "require": "./dist/server/index.js",
+      "default": "./dist/server/index.js"
+    }
+  },
+  "files": ["dist"],
+  "scripts": {
+    "build": "strapi-plugin build",
+    "watch": "strapi-plugin watch",
+    "watch:link": "strapi-plugin watch:link",
+    "verify": "strapi-plugin verify"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@strapi/strapi": "^5.44.0",
+    "@strapi/sdk-plugin": "^6.1.0",
+    "prettier": "^3.8.3",
+    "@strapi/design-system": "^2.2.0",
+    "@strapi/icons": "^2.2.0",
+    "react-intl": "^6.8.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.4.1"
+  },
+  "peerDependencies": {
+    "@strapi/strapi": "^5.44.0",
+    "@strapi/sdk-plugin": "^6.1.0",
+    "@strapi/design-system": "^2.2.0",
+    "@strapi/icons": "^2.2.0",
+    "react-intl": "^6.8.9",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.30.3",
+    "styled-components": "^6.4.1"
+  },
+  "strapi": {
+    "kind": "plugin",
+    "name": "ac-audit-log",
+    "displayName": "AC Audit Log",
+    "description": "a custom audit log"
+  },
+  "name": "ac-audit-log",
+  "description": "a custom audit log",
+  "license": " ",
+  "author": "jimmy <jimmy@example.com>"
+}
