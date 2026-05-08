@@ -1,0 +1,115 @@
+{
+    "kind": "collectionType",
+    "collectionName": "ac_audit_logs",
+    "info": {
+        "singularName": "audit-log",
+        "pluralName": "audit-logs",
+        "displayName": "Audit Log",
+        "description": "Stores audit log records for admin and content operations"
+    },
+    "options": {
+        "draftAndPublish": false
+    },
+    "pluginOptions": {
+        "content-manager": {
+            "visible": false
+        },
+        "content-type-builder": {
+            "visible": false
+        }
+    },
+    "attributes": {
+        "action": {
+            "type": "string",
+            "required": true
+        },
+        "category": {
+            "type": "enumeration",
+            "enum": [
+                "entry",
+                "content-type",
+                "media",
+                "auth",
+                "user",
+                "role",
+                "permission",
+                "system"
+            ],
+            "required": true
+        },
+        "eventDate": {
+            "type": "datetime",
+            "required": true
+        },
+        "actorType": {
+            "type": "enumeration",
+            "enum": [
+                "admin",
+                "api-user",
+                "system",
+                "unknown"
+            ],
+            "default": "unknown"
+        },
+        "actorId": {
+            "type": "integer"
+        },
+        "actorEmail": {
+            "type": "string"
+        },
+        "actorDisplayName": {
+            "type": "string"
+        },
+        "ip": {
+            "type": "string"
+        },
+        "userAgent": {
+            "type": "text"
+        },
+        "method": {
+            "type": "string"
+        },
+        "path": {
+            "type": "text"
+        },
+        "statusCode": {
+            "type": "integer"
+        },
+        "requestId": {
+            "type": "string"
+        },
+        "contentTypeUid": {
+            "type": "string"
+        },
+        "targetDocumentId": {
+            "type": "string"
+        },
+        "targetEntityId": {
+            "type": "string"
+        },
+        "targetLocale": {
+            "type": "string"
+        },
+        "payload": {
+            "type": "json"
+        },
+        "requestBody": {
+            "type": "json"
+        },
+        "responseBody": {
+            "type": "json"
+        },
+        "before": {
+            "type": "json"
+        },
+        "after": {
+            "type": "json"
+        },
+        "diff": {
+            "type": "json"
+        },
+        "metadata": {
+            "type": "json"
+        }
+    }
+}

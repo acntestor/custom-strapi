@@ -1,23 +1,34 @@
-import { getTranslation } from "./utils/getTranslation";
-import { PLUGIN_ID } from "./pluginId";
-import { Initializer } from "./components/Initializer";
-import { PluginIcon } from "./components/PluginIcon";
+import { getTranslation } from './utils/getTranslation';
+import { PLUGIN_ID } from './pluginId';
+import { Initializer } from './components/Initializer';
 
 export default {
   register(app) {
-    app.addMenuLink({
-      to: `plugins/${PLUGIN_ID}`,
-      icon: PluginIcon,
-      intlLabel: {
-        id: `${PLUGIN_ID}.plugin.name`,
-        defaultMessage: PLUGIN_ID,
+    app.createSettingSection(
+      {
+        id: PLUGIN_ID,
+        intlLabel: {
+          id: getTranslation('settings.section'),
+          defaultMessage: 'Administration Panel',
+        },
       },
-      Component: async () => {
-        const { App } = await import("./pages/App");
+      [
+        {
+          id: 'audit-logs',
+          intlLabel: {
+            id: getTranslation('plugin.name'),
+            defaultMessage: 'Audit Logs',
+          },
+          to: 'ac-audit-logs',
+          Component: async () => {
+            const { App } = await import('./pages/App');
 
-        return App;
-      },
-    });
+            return App;
+          },
+          permissions: [],
+        },
+      ]
+    );
 
     app.registerPlugin({
       id: PLUGIN_ID,
@@ -35,9 +46,15 @@ export default {
             `./translations/${locale}.json`
           );
 
-          return { data, locale };
+          return {
+            data,
+            locale,
+          };
         } catch {
-          return { data: {}, locale };
+          return {
+            data: {},
+            locale,
+          };
         }
       })
     );

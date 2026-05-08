@@ -595,6 +595,81 @@ export interface ApiGlobalGlobal extends Struct.SingleTypeSchema {
   };
 }
 
+export interface PluginAcAuditLogAuditLog extends Struct.CollectionTypeSchema {
+  collectionName: 'ac_audit_logs';
+  info: {
+    description: 'Stores audit log records for admin and content operations';
+    displayName: 'Audit Log';
+    pluralName: 'audit-logs';
+    singularName: 'audit-log';
+  };
+  options: {
+    draftAndPublish: false;
+  };
+  pluginOptions: {
+    'content-manager': {
+      visible: false;
+    };
+    'content-type-builder': {
+      visible: false;
+    };
+  };
+  attributes: {
+    action: Schema.Attribute.String & Schema.Attribute.Required;
+    actorDisplayName: Schema.Attribute.String;
+    actorEmail: Schema.Attribute.String;
+    actorId: Schema.Attribute.Integer;
+    actorType: Schema.Attribute.Enumeration<
+      ['admin', 'api-user', 'system', 'unknown']
+    > &
+      Schema.Attribute.DefaultTo<'unknown'>;
+    after: Schema.Attribute.JSON;
+    before: Schema.Attribute.JSON;
+    category: Schema.Attribute.Enumeration<
+      [
+        'entry',
+        'content-type',
+        'media',
+        'auth',
+        'user',
+        'role',
+        'permission',
+        'system',
+      ]
+    > &
+      Schema.Attribute.Required;
+    contentTypeUid: Schema.Attribute.String;
+    createdAt: Schema.Attribute.DateTime;
+    createdBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    diff: Schema.Attribute.JSON;
+    eventDate: Schema.Attribute.DateTime & Schema.Attribute.Required;
+    ip: Schema.Attribute.String;
+    locale: Schema.Attribute.String & Schema.Attribute.Private;
+    localizations: Schema.Attribute.Relation<
+      'oneToMany',
+      'plugin::ac-audit-log.audit-log'
+    > &
+      Schema.Attribute.Private;
+    metadata: Schema.Attribute.JSON;
+    method: Schema.Attribute.String;
+    path: Schema.Attribute.Text;
+    payload: Schema.Attribute.JSON;
+    publishedAt: Schema.Attribute.DateTime;
+    requestBody: Schema.Attribute.JSON;
+    requestId: Schema.Attribute.String;
+    responseBody: Schema.Attribute.JSON;
+    statusCode: Schema.Attribute.Integer;
+    targetDocumentId: Schema.Attribute.String;
+    targetEntityId: Schema.Attribute.String;
+    targetLocale: Schema.Attribute.String;
+    updatedAt: Schema.Attribute.DateTime;
+    updatedBy: Schema.Attribute.Relation<'oneToOne', 'admin::user'> &
+      Schema.Attribute.Private;
+    userAgent: Schema.Attribute.Text;
+  };
+}
+
 export interface PluginContentReleasesRelease
   extends Struct.CollectionTypeSchema {
   collectionName: 'strapi_releases';
@@ -1111,6 +1186,7 @@ declare module '@strapi/strapi' {
       'api::author.author': ApiAuthorAuthor;
       'api::category.category': ApiCategoryCategory;
       'api::global.global': ApiGlobalGlobal;
+      'plugin::ac-audit-log.audit-log': PluginAcAuditLogAuditLog;
       'plugin::content-releases.release': PluginContentReleasesRelease;
       'plugin::content-releases.release-action': PluginContentReleasesReleaseAction;
       'plugin::i18n.locale': PluginI18NLocale;

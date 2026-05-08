@@ -1,4 +1,21 @@
-export default () => ({
-  type: "admin",
-  routes: [],
-});
+export default {
+  type: 'admin',
+  routes: [
+    {
+      method: 'GET',
+      path: '/logs',
+      handler: 'audit-log.find',
+      config: {
+        policies: ['admin::isAuthenticatedAdmin'],
+      },
+    },
+    {
+      method: 'GET',
+      path: '/logs/:id',
+      handler: 'audit-log.findOne',
+      config: {
+        policies: ['admin::isAuthenticatedAdmin'],
+      },
+    },
+  ],
+};

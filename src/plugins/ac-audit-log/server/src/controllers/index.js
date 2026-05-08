@@ -1,5 +1,5 @@
-import controller from "./controller";
+import auditLog from './audit-log';
 
 export default {
-  controller,
+  'audit-log': auditLog,
 };

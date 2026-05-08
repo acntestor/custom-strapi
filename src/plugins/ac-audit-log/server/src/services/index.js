@@ -1,5 +1,6 @@
-import service from "./service";
+import auditLog from './audit-log';
+
 
 export default {
-  service,
+  'audit-log': auditLog,
 };
