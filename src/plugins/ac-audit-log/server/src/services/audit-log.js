@@ -41,6 +41,13 @@ const LIST_SELECT_FIELDS = [
     'updatedAt',
 ];
 
+const FILTER_OPTION_SELECT_FIELDS = [
+    'action',
+    'contentTypeUid',
+    'actorEmail',
+    'ip',
+];
+
 const isPlainObject = (value) => {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 };
@@ -101,6 +108,25 @@ const normalizeLogData = (data = {}) => {
     };
 };
 
+const normalizeTextOperator = (operator) => {
+    return operator === 'is' ? 'is' : 'contains';
+};
+
+const buildTextWhere = (value, operator = 'contains', options = {}) => {
+    if (!value) {
+        return null;
+    }
+
+    const normalizedOperator = normalizeTextOperator(operator);
+    const { exactCaseInsensitive = true } = options;
+
+    if (normalizedOperator === 'is') {
+        return exactCaseInsensitive ? { $eqi: value } : { $eq: value };
+    }
+
+    return { $containsi: value };
+};
+
 const buildWhere = (filters = {}) => {
     const where = {};
 
@@ -113,15 +139,19 @@ const buildWhere = (filters = {}) => {
     }
 
     if (filters.actorEmail) {
-        where.actorEmail = {
-            $containsi: filters.actorEmail,
-        };
+        where.actorEmail = buildTextWhere(
+            filters.actorEmail,
+            filters.actorEmailOperator,
+            {
+                exactCaseInsensitive: true,
+            }
+        );
     }
 
     if (filters.ip) {
-        where.ip = {
-            $containsi: filters.ip,
-        };
+        where.ip = buildTextWhere(filters.ip, filters.ipOperator, {
+            exactCaseInsensitive: false,
+        });
     }
 
     if (filters.contentTypeUid) {
@@ -158,6 +188,27 @@ const buildOrderBy = (sort = 'eventDate:DESC') => {
     return {
         [field]: direction,
     };
+};
+
+const toOption = (value) => {
+    return {
+        label: value,
+        value,
+    };
+};
+
+const toUniqueOptions = (rows, fieldName) => {
+    const values = new Set();
+
+    rows.forEach((row) => {
+        const value = row?.[fieldName];
+
+        if (value) {
+            values.add(String(value));
+        }
+    });
+
+    return [...values].sort().map(toOption);
 };
 
 export default ({ strapi }) => ({
@@ -214,6 +265,23 @@ export default ({ strapi }) => ({
                 id: Number(id),
             },
         });
+    },
+
+    async getFilterOptions() {
+        const rows = await strapi.db.query(AUDIT_LOG_UID).findMany({
+            select: FILTER_OPTION_SELECT_FIELDS,
+            orderBy: {
+                eventDate: 'desc',
+            },
+            limit: 1000,
+        });
+
+        return {
+            actions: toUniqueOptions(rows, 'action'),
+            contentTypes: toUniqueOptions(rows, 'contentTypeUid'),
+            actorEmails: toUniqueOptions(rows, 'actorEmail'),
+            ips: toUniqueOptions(rows, 'ip'),
+        };
     },
 
     maskSensitiveData,

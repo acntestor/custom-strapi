@@ -3,6 +3,14 @@ export default {
   routes: [
     {
       method: 'GET',
+      path: '/filter-options',
+      handler: 'audit-log.filterOptions',
+      config: {
+        policies: ['admin::isAuthenticatedAdmin'],
+      },
+    },
+    {
+      method: 'GET',
       path: '/logs',
       handler: 'audit-log.find',
       config: {

@@ -9,11 +9,12 @@ const normalizeParams = (params = {}) => {
         page: params.page || DEFAULT_PAGE,
         pageSize: params.pageSize || DEFAULT_PAGE_SIZE,
         sort: params.sort || DEFAULT_SORT,
-
         action: params.action || '',
         category: params.category || '',
         actorEmail: params.actorEmail || '',
+        actorEmailOperator: params.actorEmailOperator || '',
         ip: params.ip || '',
+        ipOperator: params.ipOperator || '',
         contentTypeUid: params.contentTypeUid || '',
         startDate: params.startDate || '',
         endDate: params.endDate || '',
@@ -38,7 +39,6 @@ const buildQueryString = (params = {}) => {
 const auditLogApi = {
     async findMany(params = {}) {
         const { get } = getFetchClient();
-
         const queryString = buildQueryString(params);
         const { data } = await get(`/ac-audit-log/logs${queryString}`);
 
@@ -47,8 +47,14 @@ const auditLogApi = {
 
     async findOne(id) {
         const { get } = getFetchClient();
-
         const { data } = await get(`/ac-audit-log/logs/${id}`);
+
+        return data;
+    },
+
+    async getFilterOptions() {
+        const { get } = getFetchClient();
+        const { data } = await get('/ac-audit-log/filter-options');
 
         return data;
     },

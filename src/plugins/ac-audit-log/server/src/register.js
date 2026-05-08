@@ -71,22 +71,33 @@ const normalizeAdminUser = (user) => {
   };
 };
 
-const resolveActor = (requestContext = {}, result = null, before = null) => {
+const resolveActor = (requestContext = {}, result = null) => {
+  const actorFromRequestContext = {
+    actorType: requestContext.actorType || 'unknown',
+    actorId: requestContext.actorId || null,
+    actorEmail: requestContext.actorEmail || null,
+    actorDisplayName: requestContext.actorDisplayName || null,
+  };
+
+  if (actorFromRequestContext.actorEmail || actorFromRequestContext.actorId) {
+    return actorFromRequestContext;
+  }
+
   const ctx = requestContext.ctx;
   const requestUser =
-    ctx?.state?.user || ctx?.state?.auth?.credentials || null;
+    ctx?.state?.user ||
+    ctx?.state?.auth?.credentials ||
+    ctx?.state?.auth?.user ||
+    null;
 
-  const actorFromRequest = normalizeAdminUser(requestUser);
+  const actorFromKoaState = normalizeAdminUser(requestUser);
 
-  if (actorFromRequest?.actorEmail || actorFromRequest?.actorId) {
-    return actorFromRequest;
+  if (actorFromKoaState?.actorEmail || actorFromKoaState?.actorId) {
+    return actorFromKoaState;
   }
 
   const actorFromResult =
-    normalizeAdminUser(result?.updatedBy) ||
-    normalizeAdminUser(result?.createdBy) ||
-    normalizeAdminUser(before?.updatedBy) ||
-    normalizeAdminUser(before?.createdBy);
+    normalizeAdminUser(result?.updatedBy) || normalizeAdminUser(result?.createdBy);
 
   if (actorFromResult?.actorEmail || actorFromResult?.actorId) {
     return actorFromResult;
@@ -116,9 +127,7 @@ const getTargetEntityId = (result) => {
 const getTargetLocale = (context, result) => {
   return (
     context.params?.locale ||
-    context.params?.data?.locale ||
-    result?.locale ||
-    null
+    context.params?.data?.locale || result?.locale || null
   );
 };
 
@@ -351,7 +360,7 @@ const register = ({ strapi }) => {
     const after = await getAfterSnapshot(strapi, context, result);
 
     const requestContext = getRequestContext();
-    const actor = resolveActor(requestContext, after || result, before);
+    const actor = resolveActor(requestContext, after || result);
     const diff = buildDiff(before, after);
 
     setImmediate(async () => {
@@ -391,6 +400,8 @@ const register = ({ strapi }) => {
               context.contentType?.info?.displayName || null,
             populateDepth: getPopulateDepth(strapi),
             relationPopulatePolicy: 'one-level-only',
+            actorResolutionPolicy:
+              'request-context -> koa-state -> result-metadata -> unknown',
           },
         });
       } catch (error) {

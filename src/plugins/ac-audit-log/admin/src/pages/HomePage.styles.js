@@ -42,30 +42,11 @@ export const createStyles = (theme) => ({
         display: 'inline-block',
     },
 
-    filterButton: {
-        height: 36,
-        padding: '0 16px',
-        border: `1px solid ${theme.colors.neutral300}`,
-        borderRadius: 4,
-        background: theme.colors.neutral0,
-        color: theme.colors.neutral800,
-        cursor: 'pointer',
-        fontWeight: 600,
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: 8,
-    },
-
-    filterButtonIcon: {
-        fontSize: 14,
-        lineHeight: 1,
-    },
-
     filterPopover: {
         position: 'absolute',
-        top: 44,
+        top: 40,
         left: 0,
-        width: 320,
+        width: 300,
         padding: 12,
         border: `1px solid ${theme.colors.neutral200}`,
         borderRadius: 4,
@@ -77,39 +58,92 @@ export const createStyles = (theme) => ({
         zIndex: 20,
     },
 
-    filterPopoverTitle: {
-        margin: '0 0 12px',
-        fontSize: 14,
-        fontWeight: 700,
-        color: theme.colors.neutral900,
+    filterButtonIcon: {
+        fontSize: 13,
+        lineHeight: 1,
+        opacity: 0.85,
     },
 
-    filterControl: {
-        width: '100%',
-        height: 40,
+    designSystemControlWrapper: {
         marginBottom: 8,
-        border: `1px solid ${theme.colors.neutral300}`,
-        borderRadius: 4,
-        padding: '0 12px',
-        background: theme.colors.neutral0,
-        color: theme.colors.neutral800,
-        outline: 'none',
-        boxSizing: 'border-box',
     },
 
-    filterControlDisabled: {
-        opacity: 0.65,
-        cursor: 'not-allowed',
+    pageSizeSelectWrapper: {
+        width: 90,
     },
 
-    addFilterButton: {
-        width: '100%',
-        height: 40,
+    auditButtonPrimary: {
+        minHeight: 34,
+        padding: '0 14px',
         border: 'none',
         borderRadius: 4,
         background: theme.colors.primary600,
         color: theme.colors.neutral0,
         cursor: 'pointer',
+        fontWeight: 700,
+        fontSize: 13,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+        width: '100%',
+    },
+
+    auditButtonSecondary: {
+        minHeight: 34,
+        padding: '0 14px',
+        border: `1px solid ${theme.colors.neutral300}`,
+        borderRadius: 4,
+        background: theme.colors.neutral0,
+        color: theme.colors.neutral800,
+        cursor: 'pointer',
+        fontWeight: 700,
+        fontSize: 13,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+
+    auditButtonGhost: {
+        minHeight: 30,
+        padding: '0 10px',
+        border: `1px solid ${theme.colors.neutral300}`,
+        borderRadius: 4,
+        background: theme.colors.neutral0,
+        color: theme.colors.primary600,
+        cursor: 'pointer',
+        fontWeight: 700,
+        fontSize: 12,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+
+    auditButtonDanger: {
+        minHeight: 34,
+        padding: '0 14px',
+        border: `1px solid ${theme.colors.danger600}`,
+        borderRadius: 4,
+        background: theme.colors.danger100,
+        color: theme.colors.danger700,
+        cursor: 'pointer',
+        fontWeight: 700,
+        fontSize: 13,
+        display: 'inline-flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: 8,
+    },
+
+    filterError: {
+        marginBottom: 8,
+        padding: '8px 10px',
+        borderRadius: 4,
+        background: theme.colors.danger100,
+        color: theme.colors.danger700,
+        fontSize: 13,
         fontWeight: 600,
     },
 
@@ -142,17 +176,6 @@ export const createStyles = (theme) => ({
         lineHeight: 1,
     },
 
-    primaryButton: {
-        height: 36,
-        padding: '0 16px',
-        border: 'none',
-        borderRadius: 4,
-        background: theme.colors.primary600,
-        color: theme.colors.neutral0,
-        cursor: 'pointer',
-        fontWeight: 600,
-    },
-
     card: {
         border: `1px solid ${theme.colors.neutral200}`,
         borderRadius: 4,
@@ -177,8 +200,7 @@ export const createStyles = (theme) => ({
 
     td: {
         padding: '14px 16px',
-        borderBottom: `1px solid ${theme.colors.neutral150 || theme.colors.neutral200
-            }`,
+        borderBottom: `1px solid ${theme.colors.neutral150 || theme.colors.neutral200}`,
         verticalAlign: 'top',
         fontSize: 14,
         color: theme.colors.neutral800,
@@ -190,17 +212,6 @@ export const createStyles = (theme) => ({
         background: theme.colors.primary100,
         padding: '2px 6px',
         borderRadius: 4,
-    },
-
-    linkButton: {
-        height: 32,
-        padding: '0 12px',
-        border: `1px solid ${theme.colors.neutral300}`,
-        borderRadius: 4,
-        background: theme.colors.neutral0,
-        color: theme.colors.primary600,
-        cursor: 'pointer',
-        fontWeight: 600,
     },
 
     error: {
@@ -225,17 +236,6 @@ export const createStyles = (theme) => ({
         display: 'flex',
         alignItems: 'center',
         gap: 8,
-    },
-
-    pageSizeSelect: {
-        height: 36,
-        width: 90,
-        border: `1px solid ${theme.colors.neutral300}`,
-        borderRadius: 4,
-        padding: '0 8px',
-        background: theme.colors.neutral0,
-        color: theme.colors.neutral800,
-        outline: 'none',
     },
 
     pagination: {
@@ -307,18 +307,6 @@ export const createStyles = (theme) => ({
         color: theme.colors.neutral900,
     },
 
-    modalCloseButton: {
-        width: 36,
-        height: 36,
-        border: `1px solid ${theme.colors.neutral300}`,
-        borderRadius: 4,
-        background: theme.colors.neutral0,
-        color: theme.colors.neutral800,
-        cursor: 'pointer',
-        fontSize: 20,
-        lineHeight: 1,
-    },
-
     modalBody: {
         maxHeight: 'calc(88vh - 70px)',
         overflow: 'auto',
@@ -351,35 +339,12 @@ export const createStyles = (theme) => ({
         wordBreak: 'break-word',
     },
 
-    section: {
+    diffSection: {
         marginTop: 20,
     },
 
-    sectionTitle: {
-        margin: '0 0 12px',
-        fontSize: 16,
-        fontWeight: 700,
-        color: theme.colors.neutral900,
-    },
-
-    pre: {
-        margin: 0,
-        padding: 12,
-        maxHeight: 360,
-        overflow: 'auto',
-        background: theme.colors.neutral900,
-        color: theme.colors.neutral0,
-        border: `1px solid ${theme.colors.neutral700}`,
-        borderRadius: 4,
-        fontSize: 12,
-        lineHeight: '18px',
-        whiteSpace: 'pre',
-    },
-
-    twoColumnGrid: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: 16,
+    section: {
+        marginTop: 20,
     },
 
     changedFieldsContainer: {
@@ -456,9 +421,55 @@ export const createStyles = (theme) => ({
         color: theme.colors.neutral800,
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
-        fontFamily:
-            'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
+        fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
         fontSize: 12,
         lineHeight: '18px',
+    },
+
+    diffEmpty: {
+        padding: 16,
+        border: `1px solid ${theme.colors.neutral200}`,
+        borderRadius: 4,
+        color: theme.colors.neutral600,
+        background: theme.colors.neutral0,
+        fontSize: 14,
+    },
+
+    jsonPanel: {
+        border: `1px solid ${theme.colors.neutral200}`,
+        borderRadius: 6,
+        overflow: 'hidden',
+        background: theme.colors.neutral0,
+    },
+
+    jsonPanelHeader: {
+        minHeight: 44,
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
+        padding: '10px 14px',
+        borderBottom: `1px solid ${theme.colors.neutral200}`,
+        background: theme.colors.neutral100,
+    },
+
+    jsonPanelTitle: {
+        margin: 0,
+        color: theme.colors.neutral900,
+        fontSize: 13,
+        fontWeight: 700,
+    },
+
+    jsonCodeBlock: {
+        margin: 0,
+        padding: 14,
+        maxHeight: 420,
+        overflow: 'auto',
+        background: theme.colors.neutral100,
+        color: theme.colors.neutral900,
+        fontSize: 12,
+        lineHeight: '18px',
+        whiteSpace: 'pre',
+        fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
     },
 });

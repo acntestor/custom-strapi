@@ -3,7 +3,9 @@ const parseFilters = (query = {}) => {
         action: query.action || null,
         category: query.category || null,
         actorEmail: query.actorEmail || null,
+        actorEmailOperator: query.actorEmailOperator || 'contains',
         ip: query.ip || null,
+        ipOperator: query.ipOperator || 'contains',
         contentTypeUid: query.contentTypeUid || null,
         startDate: query.startDate || null,
         endDate: query.endDate || null,
@@ -49,6 +51,17 @@ export default ({ strapi }) => ({
 
         ctx.body = {
             data: auditLog,
+        };
+    },
+
+    async filterOptions(ctx) {
+        const options = await strapi
+            .plugin('ac-audit-log')
+            .service('audit-log')
+            .getFilterOptions();
+
+        ctx.body = {
+            data: options,
         };
     },
 });
