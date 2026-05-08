@@ -3,16 +3,46 @@ import { getRequestContext } from './utils/request-context.js';
 import { buildDiff } from './utils/diff.js';
 
 const AUDIT_LOG_UID = 'plugin::ac-audit-log.audit-log';
-
-const AUDITABLE_ACTIONS = [
-  'create',
-  'update',
-  'delete',
-  'publish',
-  'unpublish',
-];
-
 const DEFAULT_POPULATE_DEPTH = 4;
+
+const normalizeAction = (action = '') => {
+  return String(action || '').toLowerCase();
+};
+
+const isReadDocumentAction = (action = '') => {
+  const normalizedAction = normalizeAction(action);
+
+  return (
+    normalizedAction.startsWith('find') ||
+    normalizedAction.startsWith('count') ||
+    normalizedAction.startsWith('read') ||
+    normalizedAction === 'load'
+  );
+};
+
+const isPublishAction = (action = '') => {
+  const normalizedAction = normalizeAction(action);
+
+  return normalizedAction.includes('publish') && !normalizedAction.includes('unpublish');
+};
+
+const isUnpublishAction = (action = '') => {
+  return normalizeAction(action).includes('unpublish');
+};
+
+const isPublicationAction = (action = '') => {
+  return isPublishAction(action) || isUnpublishAction(action);
+};
+
+const isDeleteAction = (action = '') => {
+  const normalizedAction = normalizeAction(action);
+
+  return (
+    normalizedAction.includes('delete') ||
+    normalizedAction.includes('remove') ||
+    normalizedAction.includes('destroy')
+  );
+};
 
 const shouldAudit = (context) => {
   if (!context?.uid) {
@@ -27,7 +57,11 @@ const shouldAudit = (context) => {
     return false;
   }
 
-  return AUDITABLE_ACTIONS.includes(context.action);
+  if (isReadDocumentAction(context.action)) {
+    return false;
+  }
+
+  return true;
 };
 
 const getPluginConfig = (strapi) => {
@@ -290,7 +324,7 @@ const fetchDocumentSnapshot = async (strapi, uid, options = {}) => {
 };
 
 const getBeforeSnapshot = async (strapi, context) => {
-  if (!['update', 'delete', 'publish', 'unpublish'].includes(context.action)) {
+  if (isPublicationAction(context.action)) {
     return null;
   }
 
@@ -316,7 +350,7 @@ const getBeforeSnapshot = async (strapi, context) => {
 };
 
 const getAfterSnapshot = async (strapi, context, result) => {
-  if (context.action === 'delete') {
+  if (isDeleteAction(context.action) || isPublicationAction(context.action)) {
     return null;
   }
 
@@ -347,6 +381,38 @@ const getAfterSnapshot = async (strapi, context, result) => {
   }
 };
 
+const buildEmptyDiff = () => {
+  return {
+    changes: [],
+    changedFields: [],
+    hiddenFields: [],
+  };
+};
+
+const getEvidenceDisplayMode = ({ action, before, after }) => {
+  if (isPublicationAction(action)) {
+    return 'publication-event';
+  }
+
+  if (isDeleteAction(action)) {
+    return 'deleted-snapshot';
+  }
+
+  if (!before && after) {
+    return 'initial-values';
+  }
+
+  return 'changed-fields';
+};
+
+const buildEvidenceDiff = ({ action, before, after }) => {
+  if (isPublicationAction(action)) {
+    return buildEmptyDiff();
+  }
+
+  return buildDiff(before, after);
+};
+
 const register = ({ strapi }) => {
   strapi.server.use(requestContextMiddleware({ strapi }));
 
@@ -361,49 +427,65 @@ const register = ({ strapi }) => {
 
     const requestContext = getRequestContext();
     const actor = resolveActor(requestContext, after || result);
-    const diff = buildDiff(before, after);
+    const diff = buildEvidenceDiff({
+      action: context.action,
+      before,
+      after,
+    });
+    const evidenceDisplayMode = getEvidenceDisplayMode({
+      action: context.action,
+      before,
+      after,
+    });
+
+    const auditLogData = {
+      action: `entry.${context.action || 'write'}`,
+      category: 'entry',
+
+      actorType: actor.actorType,
+      actorId: actor.actorId,
+      actorEmail: actor.actorEmail,
+      actorDisplayName: actor.actorDisplayName,
+
+      ip: requestContext.ip || null,
+      userAgent: requestContext.userAgent || null,
+      method: requestContext.method || null,
+      path: requestContext.path || null,
+      statusCode: requestContext.statusCode || null,
+      requestId: requestContext.requestId || null,
+      requestBody: requestContext.requestBody || null,
+
+      contentTypeUid: context.uid,
+      targetDocumentId: getTargetDocumentId(context, after || result || before),
+      targetEntityId: getTargetEntityId(after || result || before),
+      targetLocale: getTargetLocale(context, after || result || before),
+
+      payload: {
+        params: context.params || {},
+      },
+
+      before,
+      after,
+      diff,
+
+      metadata: {
+        contentTypeDisplayName:
+          context.contentType?.info?.displayName || null,
+        populateDepth: getPopulateDepth(strapi),
+        relationPopulatePolicy: 'one-level-only',
+        actorResolutionPolicy:
+          'request-context -> koa-state -> result-metadata -> unknown',
+        auditSource: 'document-middleware',
+        documentAction: context.action || null,
+        evidenceDisplayMode,
+        publicationEventPolicy:
+          'publication events are displayed separately from content changed fields',
+      },
+    };
 
     setImmediate(async () => {
       try {
-        await strapi.plugin('ac-audit-log').service('audit-log').createLog({
-          action: `entry.${context.action}`,
-          category: 'entry',
-
-          actorType: actor.actorType,
-          actorId: actor.actorId,
-          actorEmail: actor.actorEmail,
-          actorDisplayName: actor.actorDisplayName,
-
-          ip: requestContext.ip || null,
-          userAgent: requestContext.userAgent || null,
-          method: requestContext.method || null,
-          path: requestContext.path || null,
-          statusCode: requestContext.statusCode || null,
-          requestId: requestContext.requestId || null,
-          requestBody: requestContext.requestBody || null,
-
-          contentTypeUid: context.uid,
-          targetDocumentId: getTargetDocumentId(context, after || result),
-          targetEntityId: getTargetEntityId(after || result),
-          targetLocale: getTargetLocale(context, after || result),
-
-          payload: {
-            params: context.params || {},
-          },
-
-          before,
-          after,
-          diff,
-
-          metadata: {
-            contentTypeDisplayName:
-              context.contentType?.info?.displayName || null,
-            populateDepth: getPopulateDepth(strapi),
-            relationPopulatePolicy: 'one-level-only',
-            actorResolutionPolicy:
-              'request-context -> koa-state -> result-metadata -> unknown',
-          },
-        });
+        await strapi.plugin('ac-audit-log').service('audit-log').createLog(auditLogData);
       } catch (error) {
         strapi.log.error(
           `[ac-audit-log] Failed to create audit log: ${error.message}`

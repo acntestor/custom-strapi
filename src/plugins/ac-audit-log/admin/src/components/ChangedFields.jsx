@@ -1,5 +1,44 @@
 import React from 'react';
 
+const SYSTEM_FIELDS = new Set([
+    'id',
+    'documentId',
+    'createdAt',
+    'updatedAt',
+    'createdBy',
+    'updatedBy',
+    'publishedAt',
+    'locale',
+    'localizations',
+    'provider',
+    'provider_metadata',
+    'folderPath',
+    'previewUrl',
+    'formats',
+    'hash',
+    'mime',
+    'size',
+    'width',
+    'height',
+    'ext',
+    'password',
+    'resetPasswordToken',
+    'registrationToken',
+]);
+
+const SNAPSHOT_ENTITY_SUMMARY_FIELDS = new Set([
+    'id',
+    'documentId',
+    'url',
+    'name',
+    'title',
+    'email',
+    'alternativeText',
+    'caption',
+    'mime',
+    'ext',
+]);
+
 const DEFAULT_STYLES = {
     changedFieldsContainer: {
         marginTop: 8,
@@ -68,8 +107,7 @@ const DEFAULT_STYLES = {
         margin: 0,
         whiteSpace: 'pre-wrap',
         wordBreak: 'break-word',
-        fontFamily:
-            'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
+        fontFamily: 'SFMono-Regular, Consolas, Liberation Mono, Menlo, monospace',
         fontSize: 12,
         lineHeight: '18px',
     },
@@ -85,6 +123,29 @@ const mergeStyles = (...styleObjects) => {
 
 const isPlainObject = (value) => {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
+};
+
+const normalizeAction = (log) => {
+    return String(log?.action || log?.metadata?.documentAction || '').toLowerCase();
+};
+
+const isPublishLog = (log) => {
+    const action = normalizeAction(log);
+    return action.includes('publish') && !action.includes('unpublish');
+};
+
+const isUnpublishLog = (log) => {
+    return normalizeAction(log).includes('unpublish');
+};
+
+const isDeleteLog = (log) => {
+    const action = normalizeAction(log);
+
+    return (
+        action.includes('delete') ||
+        action.includes('remove') ||
+        action.includes('destroy')
+    );
 };
 
 const stringifyValue = (value, comparedValue) => {
@@ -129,7 +190,6 @@ const stringifyValue = (value, comparedValue) => {
 
         const start = Math.max(0, startDiff - 260);
         const end = Math.min(value.length, endValue + 260);
-
         const prefix = start > 0 ? '…' : '';
         const suffix = end < value.length ? '…' : '';
 
@@ -183,8 +243,7 @@ const summarizeEntity = (value) => {
         return value.__component;
     }
 
-    return `${Object.keys(value).length} field${Object.keys(value).length === 1 ? '' : 's'
-        }`;
+    return `${Object.keys(value).length} field${Object.keys(value).length === 1 ? '' : 's'}`;
 };
 
 const normalizeChanges = (log) => {
@@ -193,9 +252,7 @@ const normalizeChanges = (log) => {
     }
 
     if (Array.isArray(log.diff.changes)) {
-        return log.diff.changes.filter((change) => {
-            return change?.path;
-        });
+        return log.diff.changes.filter((change) => change?.path);
     }
 
     return Object.entries(log.diff)
@@ -209,7 +266,186 @@ const normalizeChanges = (log) => {
         }));
 };
 
+const isSnapshotEntityLikeObject = (value) => {
+    if (!isPlainObject(value)) {
+        return false;
+    }
+
+    if (value.__component) {
+        return false;
+    }
+
+    return [...SNAPSHOT_ENTITY_SUMMARY_FIELDS].some((fieldName) => value[fieldName]);
+};
+
+const getReadableSnapshotValue = (value) => {
+    if (Array.isArray(value)) {
+        return `${value.length} item${value.length === 1 ? '' : 's'}`;
+    }
+
+    if (isSnapshotEntityLikeObject(value)) {
+        return summarizeEntity(value);
+    }
+
+    return stringifyValue(value);
+};
+
+const collectSnapshotEntries = (value, path = '') => {
+    if (value === undefined) {
+        return [];
+    }
+
+    if (value === null) {
+        return path ? [{ path, value }] : [];
+    }
+
+    if (Array.isArray(value)) {
+        if (!path) {
+            return value.flatMap((item, index) => collectSnapshotEntries(item, `[${index}]`));
+        }
+
+        if (value.length === 0) {
+            return [{ path, value }];
+        }
+
+        return value.flatMap((item, index) =>
+            collectSnapshotEntries(item, `${path}[${index}]`)
+        );
+    }
+
+    if (!isPlainObject(value)) {
+        return path ? [{ path, value }] : [];
+    }
+
+    if (path && isSnapshotEntityLikeObject(value)) {
+        return [{ path, value: getReadableSnapshotValue(value) }];
+    }
+
+    const childEntries = Object.entries(value)
+        .filter(([key]) => !SYSTEM_FIELDS.has(key))
+        .filter(([key]) => key !== '__component')
+        .flatMap(([key, childValue]) => {
+            const childPath = path ? `${path}.${key}` : key;
+            return collectSnapshotEntries(childValue, childPath);
+        });
+
+    if (childEntries.length === 0 && path) {
+        return [{ path, value: getReadableSnapshotValue(value) }];
+    }
+
+    return childEntries;
+};
+
+const getSnapshotEntries = (snapshot = {}) => {
+    if (!isPlainObject(snapshot)) {
+        return [];
+    }
+
+    return collectSnapshotEntries(snapshot);
+};
+
+const getDisplayMode = (log) => {
+    if (isPublishLog(log) || isUnpublishLog(log)) {
+        return 'publication-event';
+    }
+
+    if (isDeleteLog(log)) {
+        return 'deleted-snapshot';
+    }
+
+    if (log?.metadata?.evidenceDisplayMode) {
+        return log.metadata.evidenceDisplayMode;
+    }
+
+    if (!log?.before && log?.after) {
+        return 'initial-values';
+    }
+
+    return 'changed-fields';
+};
+
+const SnapshotValues = ({ title, subtitle, snapshot, label, styles }) => {
+    const entries = getSnapshotEntries(snapshot);
+
+    return (
+        <div style={getStyle(styles, 'changedFieldsContainer')}>
+            <h3 style={getStyle(styles, 'changedFieldsTitle')}>{title}</h3>
+            <p style={getStyle(styles, 'changedFieldsSubtitle')}>{subtitle}</p>
+
+            {entries.length === 0 ? (
+                <div style={getStyle(styles, 'diffEmpty')}>
+                    No persisted snapshot fields detected for this audit event.
+                </div>
+            ) : (
+                entries.map((entry) => (
+                    <div key={entry.path} style={getStyle(styles, 'fieldCard')}>
+                        <div style={getStyle(styles, 'fieldHeader')}>{entry.path}</div>
+                        <div style={getStyle(styles, 'valueColumn')}>
+                            <span
+                                style={mergeStyles(
+                                    getStyle(styles, 'valueLabel'),
+                                    getStyle(styles, 'afterLabel')
+                                )}
+                            >
+                                {label}
+                            </span>
+                            <pre style={getStyle(styles, 'valueBox')}>
+                                {stringifyValue(entry.value)}
+                            </pre>
+                        </div>
+                    </div>
+                ))
+            )}
+        </div>
+    );
+};
+
+const PublicationEvent = ({ log, styles }) => {
+    const isUnpublish = isUnpublishLog(log);
+    const title = isUnpublish ? 'Unpublication Event' : 'Publication Event';
+    const message = isUnpublish
+        ? 'This entry was unpublished. Content field changes, if any, are recorded in entry.update audit events.'
+        : 'This entry was published. Content field changes, if any, are recorded in entry.update audit events.';
+
+    return (
+        <div style={getStyle(styles, 'changedFieldsContainer')}>
+            <h3 style={getStyle(styles, 'changedFieldsTitle')}>{title}</h3>
+            <div style={getStyle(styles, 'diffEmpty')}>{message}</div>
+        </div>
+    );
+};
+
 export const ChangedFields = ({ log, styles }) => {
+    const displayMode = getDisplayMode(log);
+
+    if (displayMode === 'publication-event') {
+        return <PublicationEvent log={log} styles={styles} />;
+    }
+
+    if (displayMode === 'initial-values') {
+        return (
+            <SnapshotValues
+                title="Initial Values"
+                subtitle="Initial persisted values recorded when this entry was created."
+                snapshot={log?.after}
+                label="Initial"
+                styles={styles}
+            />
+        );
+    }
+
+    if (displayMode === 'deleted-snapshot') {
+        return (
+            <SnapshotValues
+                title="Deleted Snapshot"
+                subtitle="Persisted values recorded before this entry was deleted."
+                snapshot={log?.before}
+                label="Deleted"
+                styles={styles}
+            />
+        );
+    }
+
     const entries = normalizeChanges(log);
 
     if (entries.length === 0) {
@@ -235,7 +471,6 @@ export const ChangedFields = ({ log, styles }) => {
                     entry.mode === 'summary'
                         ? summarizeEntity(entry.before)
                         : stringifyValue(entry.before, entry.after);
-
                 const afterText =
                     entry.mode === 'summary'
                         ? summarizeEntity(entry.after)
@@ -244,7 +479,6 @@ export const ChangedFields = ({ log, styles }) => {
                 return (
                     <div key={entry.path} style={getStyle(styles, 'fieldCard')}>
                         <div style={getStyle(styles, 'fieldHeader')}>{entry.path}</div>
-
                         <div style={getStyle(styles, 'valueGrid')}>
                             <div
                                 style={mergeStyles(
@@ -260,7 +494,6 @@ export const ChangedFields = ({ log, styles }) => {
                                 >
                                     Before
                                 </span>
-
                                 <pre style={getStyle(styles, 'valueBox')}>{beforeText}</pre>
                             </div>
 
@@ -273,7 +506,6 @@ export const ChangedFields = ({ log, styles }) => {
                                 >
                                     After
                                 </span>
-
                                 <pre style={getStyle(styles, 'valueBox')}>{afterText}</pre>
                             </div>
                         </div>
