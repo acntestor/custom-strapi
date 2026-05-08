@@ -12,7 +12,7 @@ const AUDITABLE_ACTIONS = [
   'unpublish',
 ];
 
-const MAX_POPULATE_DEPTH = 4;
+const DEFAULT_POPULATE_DEPTH = 4;
 
 const shouldAudit = (context) => {
   if (!context?.uid) {
@@ -28,6 +28,21 @@ const shouldAudit = (context) => {
   }
 
   return AUDITABLE_ACTIONS.includes(context.action);
+};
+
+const getPluginConfig = (strapi) => {
+  return strapi.config.get('plugin::ac-audit-log') || {};
+};
+
+const getPopulateDepth = (strapi) => {
+  const config = getPluginConfig(strapi);
+  const depth = Number(config.populateDepth || DEFAULT_POPULATE_DEPTH);
+
+  if (!Number.isFinite(depth) || depth < 1) {
+    return DEFAULT_POPULATE_DEPTH;
+  }
+
+  return Math.floor(depth);
 };
 
 const getDisplayName = (user) => {
@@ -58,7 +73,8 @@ const normalizeAdminUser = (user) => {
 
 const resolveActor = (requestContext = {}, result = null, before = null) => {
   const ctx = requestContext.ctx;
-  const requestUser = ctx?.state?.user || ctx?.state?.auth?.credentials || null;
+  const requestUser =
+    ctx?.state?.user || ctx?.state?.auth?.credentials || null;
 
   const actorFromRequest = normalizeAdminUser(requestUser);
 
@@ -110,7 +126,12 @@ const getModelSchema = (strapi, uid) => {
   return strapi.contentType(uid) || strapi.components?.[uid] || null;
 };
 
-const buildComponentPopulate = (strapi, componentUid, depth, visited = new Set()) => {
+const buildComponentPopulate = (
+  strapi,
+  componentUid,
+  depth,
+  visited = new Set()
+) => {
   if (!componentUid || depth <= 0 || visited.has(componentUid)) {
     return {};
   }
@@ -124,10 +145,20 @@ const buildComponentPopulate = (strapi, componentUid, depth, visited = new Set()
   const nextVisited = new Set(visited);
   nextVisited.add(componentUid);
 
-  return buildPopulateFromAttributes(strapi, schema.attributes, depth - 1, nextVisited);
+  return buildPopulateFromAttributes(
+    strapi,
+    schema.attributes,
+    depth - 1,
+    nextVisited
+  );
 };
 
-const buildDynamicZonePopulate = (strapi, componentUids = [], depth, visited = new Set()) => {
+const buildDynamicZonePopulate = (
+  strapi,
+  componentUids = [],
+  depth,
+  visited = new Set()
+) => {
   const on = {};
 
   componentUids.forEach((componentUid) => {
@@ -148,52 +179,68 @@ const buildDynamicZonePopulate = (strapi, componentUids = [], depth, visited = n
   };
 };
 
-const buildPopulateFromAttributes = (strapi, attributes = {}, depth, visited = new Set()) => {
+const buildPopulateFromAttributes = (
+  strapi,
+  attributes = {},
+  depth,
+  visited = new Set()
+) => {
   if (depth <= 0) {
     return {};
   }
 
-  return Object.entries(attributes).reduce((populate, [attributeName, attribute]) => {
-    if (!attribute?.type) {
-      return populate;
-    }
+  return Object.entries(attributes).reduce(
+    (populate, [attributeName, attribute]) => {
+      if (!attribute?.type) {
+        return populate;
+      }
 
-    if (attribute.type === 'media') {
-      populate[attributeName] = true;
-      return populate;
-    }
+      if (attribute.type === 'media') {
+        populate[attributeName] = true;
+        return populate;
+      }
 
-    if (attribute.type === 'relation') {
-      populate[attributeName] = true;
-      return populate;
-    }
+      /**
+       * Relations are intentionally populated one level only.
+       * Do not recursively populate relation -> relation to avoid huge payloads
+       * and circular structures.
+       */
+      if (attribute.type === 'relation') {
+        populate[attributeName] = true;
+        return populate;
+      }
 
-    if (attribute.type === 'component' && attribute.component) {
-      populate[attributeName] = {
-        populate: buildComponentPopulate(
+      if (attribute.type === 'component' && attribute.component) {
+        populate[attributeName] = {
+          populate: buildComponentPopulate(
+            strapi,
+            attribute.component,
+            depth,
+            visited
+          ),
+        };
+
+        return populate;
+      }
+
+      if (
+        attribute.type === 'dynamiczone' &&
+        Array.isArray(attribute.components)
+      ) {
+        populate[attributeName] = buildDynamicZonePopulate(
           strapi,
-          attribute.component,
+          attribute.components,
           depth,
           visited
-        ),
-      };
+        );
+
+        return populate;
+      }
 
       return populate;
-    }
-
-    if (attribute.type === 'dynamiczone' && Array.isArray(attribute.components)) {
-      populate[attributeName] = buildDynamicZonePopulate(
-        strapi,
-        attribute.components,
-        depth,
-        visited
-      );
-
-      return populate;
-    }
-
-    return populate;
-  }, {});
+    },
+    {}
+  );
 };
 
 const buildDeepPopulate = (strapi, uid) => {
@@ -206,7 +253,7 @@ const buildDeepPopulate = (strapi, uid) => {
   return buildPopulateFromAttributes(
     strapi,
     schema.attributes,
-    MAX_POPULATE_DEPTH
+    getPopulateDepth(strapi)
   );
 };
 
@@ -342,7 +389,8 @@ const register = ({ strapi }) => {
           metadata: {
             contentTypeDisplayName:
               context.contentType?.info?.displayName || null,
-            populateDepth: MAX_POPULATE_DEPTH,
+            populateDepth: getPopulateDepth(strapi),
+            relationPopulatePolicy: 'one-level-only',
           },
         });
       } catch (error) {

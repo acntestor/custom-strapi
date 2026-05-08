@@ -53,6 +53,7 @@ export default () => {
         const requestId = headers['x-request-id'] || randomUUID();
 
         const requestContext = {
+            ctx,
             requestId,
             ip: resolveClientIp(ctx),
             userAgent: headers['user-agent'] || null,
@@ -60,11 +61,6 @@ export default () => {
             path: ctx.request.url,
             statusCode: null,
             requestBody: ctx.request.body || null,
-            authorization:
-                headers.authorization ||
-                headers.Authorization ||
-                null,
-
             actorType: 'unknown',
             actorId: null,
             actorEmail: null,
@@ -72,9 +68,6 @@ export default () => {
         };
 
         await runWithRequestContext(requestContext, async () => {
-            /**
-             * Try before next() first.
-             */
             const beforeActor = resolveActorFromState(ctx);
             const beforeContext = getRequestContext();
 
@@ -85,10 +78,6 @@ export default () => {
 
             await next();
 
-            /**
-             * Try again after next().
-             * Some Strapi admin auth data is populated during downstream middlewares.
-             */
             const afterActor = resolveActorFromState(ctx);
             const afterContext = getRequestContext();
 

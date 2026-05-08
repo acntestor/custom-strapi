@@ -99,7 +99,6 @@ const HomePage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
 
   const [logs, setLogs] = useState([]);
-
   const [pagination, setPagination] = useState({
     page: getInitialNumberParam(searchParams, 'page', DEFAULT_PAGE),
     pageSize: getInitialNumberParam(
@@ -122,20 +121,16 @@ const HomePage = () => {
   });
 
   const [filterOpen, setFilterOpen] = useState(false);
-
   const [draftFilter, setDraftFilter] = useState({
     field: 'action',
     value: '',
   });
 
   const [loading, setLoading] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const [selectedLogId, setSelectedLogId] = useState(null);
-
-  const selectedLog = useMemo(() => {
-    return logs.find((item) => item.id === selectedLogId) || null;
-  }, [logs, selectedLogId]);
+  const [selectedLog, setSelectedLog] = useState(null);
 
   const queryParams = useMemo(
     () => ({
@@ -182,7 +177,6 @@ const HomePage = () => {
       const response = await auditLogApi.findMany(queryParams);
 
       setLogs(response.data || []);
-
       setPagination((current) => ({
         ...current,
         ...(response.meta?.pagination || {}),
@@ -195,6 +189,24 @@ const HomePage = () => {
       );
     } finally {
       setLoading(false);
+    }
+  };
+
+  const openLogDetails = async (id) => {
+    setDetailLoading(true);
+    setError(null);
+
+    try {
+      const response = await auditLogApi.findOne(id);
+      setSelectedLog(response.data || null);
+    } catch (err) {
+      setError(
+        err?.response?.data?.error?.message ||
+        err?.message ||
+        'Failed to load audit log details'
+      );
+    } finally {
+      setDetailLoading(false);
     }
   };
 
@@ -427,7 +439,8 @@ const HomePage = () => {
                       <button
                         type="button"
                         style={styles.linkButton}
-                        onClick={() => setSelectedLogId(log.id)}
+                        onClick={() => openLogDetails(log.id)}
+                        disabled={detailLoading}
                       >
                         View
                       </button>
@@ -511,7 +524,7 @@ const HomePage = () => {
                 <button
                   type="button"
                   style={styles.modalCloseButton}
-                  onClick={() => setSelectedLogId(null)}
+                  onClick={() => setSelectedLog(null)}
                 >
                   ×
                 </button>
@@ -566,7 +579,6 @@ const HomePage = () => {
 
                 <div style={styles.section}>
                   <h3 style={styles.sectionTitle}>Request / Payload</h3>
-
                   <JsonBlock
                     styles={styles}
                     value={{
@@ -579,7 +591,6 @@ const HomePage = () => {
 
                 <div style={styles.section}>
                   <h3 style={styles.sectionTitle}>Snapshots / Diff</h3>
-
                   <JsonBlock
                     styles={styles}
                     value={{

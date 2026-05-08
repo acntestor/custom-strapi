@@ -23,6 +23,24 @@ const ALLOWED_SORT_FIELDS = [
     'ip',
 ];
 
+const LIST_SELECT_FIELDS = [
+    'id',
+    'action',
+    'category',
+    'eventDate',
+    'actorType',
+    'actorId',
+    'actorEmail',
+    'actorDisplayName',
+    'ip',
+    'contentTypeUid',
+    'targetDocumentId',
+    'targetEntityId',
+    'targetLocale',
+    'createdAt',
+    'updatedAt',
+];
+
 const isPlainObject = (value) => {
     return value !== null && typeof value === 'object' && !Array.isArray(value);
 };
@@ -163,12 +181,12 @@ export default ({ strapi }) => ({
         );
 
         const offset = (page - 1) * pageSize;
-
         const where = buildWhere(params.filters || {});
         const orderBy = buildOrderBy(params.sort);
 
         const [results, total] = await Promise.all([
             strapi.db.query(AUDIT_LOG_UID).findMany({
+                select: LIST_SELECT_FIELDS,
                 where,
                 orderBy,
                 limit: pageSize,
