@@ -29,7 +29,7 @@ const DEFAULT_FILTER_OPTIONS = {
 };
 
 const DEFAULT_PAGE = 1;
-const DEFAULT_PAGE_SIZE = 50;
+const DEFAULT_PAGE_SIZE = 10;
 const DEFAULT_SORT = 'eventDate:DESC';
 
 const formatDate = (value) => {

@@ -131,6 +131,7 @@ const normalizeAction = (log) => {
 
 const isPublishLog = (log) => {
     const action = normalizeAction(log);
+
     return action.includes('publish') && !action.includes('unpublish');
 };
 
@@ -146,6 +147,62 @@ const isDeleteLog = (log) => {
         action.includes('remove') ||
         action.includes('destroy')
     );
+};
+
+const isMediaObject = (value) => {
+    if (!isPlainObject(value)) {
+        return false;
+    }
+
+    return Boolean(value.url || value.mime || value.ext || value.provider);
+};
+
+const getMediaKind = (value) => {
+    if (typeof value?.mime === 'string' && value.mime.startsWith('image/')) {
+        return 'Image';
+    }
+
+    return 'Media';
+};
+
+const summarizeMedia = (value) => {
+    if (!isMediaObject(value)) {
+        return null;
+    }
+
+    const lines = [];
+    const label =
+        value.name ||
+        value.alternativeText ||
+        value.caption ||
+        value.url ||
+        value.id ||
+        'Untitled media';
+    const idSuffix = value.id ? ` (#${value.id})` : '';
+
+    lines.push(`${getMediaKind(value)}: ${label}${idSuffix}`);
+
+    if (value.url) {
+        lines.push(`URL: ${value.url}`);
+    }
+
+    if (value.mime) {
+        lines.push(`Type: ${value.mime}`);
+    }
+
+    if (value.ext) {
+        lines.push(`Extension: ${value.ext}`);
+    }
+
+    if (value.alternativeText) {
+        lines.push(`Alt: ${value.alternativeText}`);
+    }
+
+    if (value.caption) {
+        lines.push(`Caption: ${value.caption}`);
+    }
+
+    return lines.join('\n');
 };
 
 const stringifyValue = (value, comparedValue) => {
@@ -216,6 +273,12 @@ const summarizeEntity = (value) => {
         return `${value.length} item${value.length === 1 ? '' : 's'}`;
     }
 
+    const mediaSummary = summarizeMedia(value);
+
+    if (mediaSummary) {
+        return mediaSummary;
+    }
+
     if (!isPlainObject(value)) {
         return stringifyValue(value);
     }
@@ -227,6 +290,7 @@ const summarizeEntity = (value) => {
         value.alternativeText ||
         value.caption ||
         value.url ||
+        value.body ||
         value.documentId ||
         value.id ||
         null;
@@ -263,6 +327,7 @@ const normalizeChanges = (log) => {
             before: value.before,
             after: value.after,
             mode: value.mode || 'value',
+            metadata: value.metadata || null,
         }));
 };
 
@@ -415,6 +480,84 @@ const PublicationEvent = ({ log, styles }) => {
     );
 };
 
+const getArrayItemPosition = (entry, side) => {
+    const arrayItem = entry?.metadata?.arrayItem;
+
+    if (!arrayItem) {
+        return null;
+    }
+
+    if (side === 'before') {
+        return arrayItem.beforePosition || null;
+    }
+
+    return arrayItem.afterPosition || null;
+};
+
+const withPositionLine = (text, position) => {
+    if (!position) {
+        return text;
+    }
+
+    return `${text}\nPosition: ${position}`;
+};
+
+const getBeforeText = (entry) => {
+    if (entry.mode === 'added') {
+        return 'Not set';
+    }
+
+    if (entry.mode === 'moved') {
+        return stringifyValue(entry.before, entry.after);
+    }
+
+    if (entry.mode === 'updated') {
+        return withPositionLine(
+            summarizeEntity(entry.before),
+            getArrayItemPosition(entry, 'before')
+        );
+    }
+
+    if (entry.mode === 'removed') {
+        return withPositionLine(
+            summarizeEntity(entry.before),
+            getArrayItemPosition(entry, 'before')
+        );
+    }
+
+    return entry.mode === 'summary'
+        ? summarizeEntity(entry.before)
+        : stringifyValue(entry.before, entry.after);
+};
+
+const getAfterText = (entry) => {
+    if (entry.mode === 'removed') {
+        return 'Removed';
+    }
+
+    if (entry.mode === 'moved') {
+        return stringifyValue(entry.after, entry.before);
+    }
+
+    if (entry.mode === 'updated') {
+        return withPositionLine(
+            summarizeEntity(entry.after),
+            getArrayItemPosition(entry, 'after')
+        );
+    }
+
+    if (entry.mode === 'added') {
+        return withPositionLine(
+            summarizeEntity(entry.after),
+            getArrayItemPosition(entry, 'after')
+        );
+    }
+
+    return entry.mode === 'summary'
+        ? summarizeEntity(entry.after)
+        : stringifyValue(entry.after, entry.before);
+};
+
 export const ChangedFields = ({ log, styles }) => {
     const displayMode = getDisplayMode(log);
 
@@ -467,14 +610,8 @@ export const ChangedFields = ({ log, styles }) => {
             </p>
 
             {entries.map((entry) => {
-                const beforeText =
-                    entry.mode === 'summary'
-                        ? summarizeEntity(entry.before)
-                        : stringifyValue(entry.before, entry.after);
-                const afterText =
-                    entry.mode === 'summary'
-                        ? summarizeEntity(entry.after)
-                        : stringifyValue(entry.after, entry.before);
+                const beforeText = getBeforeText(entry);
+                const afterText = getAfterText(entry);
 
                 return (
                     <div key={entry.path} style={getStyle(styles, 'fieldCard')}>
