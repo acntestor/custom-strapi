@@ -135,3 +135,4 @@ build
 ############################
 code_md
 export-ac-audit-log-code.sh
+export_strapi.sh
