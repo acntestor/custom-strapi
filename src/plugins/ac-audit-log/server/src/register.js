@@ -1,6 +1,8 @@
 import requestContextMiddleware from './middlewares/request-context.js';
 import { getRequestContext } from './utils/request-context.js';
 import { buildDiff } from './utils/diff.js';
+import { registerContentTypeBuilderEventAudit } from './utils/content-type-builder-event-audit.js';
+import { enqueueAuditLogWrite } from './utils/audit-log-writer.js';
 
 const AUDIT_LOG_UID = 'plugin::ac-audit-log.audit-log';
 const DEFAULT_POPULATE_DEPTH = 4;
@@ -11,7 +13,6 @@ const normalizeAction = (action = '') => {
 
 const isReadDocumentAction = (action = '') => {
   const normalizedAction = normalizeAction(action);
-
   return (
     normalizedAction.startsWith('find') ||
     normalizedAction.startsWith('count') ||
@@ -22,7 +23,6 @@ const isReadDocumentAction = (action = '') => {
 
 const isPublishAction = (action = '') => {
   const normalizedAction = normalizeAction(action);
-
   return normalizedAction.includes('publish') && !normalizedAction.includes('unpublish');
 };
 
@@ -36,7 +36,6 @@ const isPublicationAction = (action = '') => {
 
 const isDeleteAction = (action = '') => {
   const normalizedAction = normalizeAction(action);
-
   return (
     normalizedAction.includes('delete') ||
     normalizedAction.includes('remove') ||
@@ -160,8 +159,7 @@ const getTargetEntityId = (result) => {
 
 const getTargetLocale = (context, result) => {
   return (
-    context.params?.locale ||
-    context.params?.data?.locale || result?.locale || null
+    context.params?.locale || context.params?.data?.locale || result?.locale || null
   );
 };
 
@@ -262,7 +260,6 @@ const buildPopulateFromAttributes = (
             visited
           ),
         };
-
         return populate;
       }
 
@@ -276,7 +273,6 @@ const buildPopulateFromAttributes = (
           depth,
           visited
         );
-
         return populate;
       }
 
@@ -344,7 +340,6 @@ const getBeforeSnapshot = async (strapi, context) => {
     strapi.log.warn(
       `[ac-audit-log] Failed to load before snapshot for ${context.uid}: ${error.message}`
     );
-
     return null;
   }
 };
@@ -376,7 +371,6 @@ const getAfterSnapshot = async (strapi, context, result) => {
     strapi.log.warn(
       `[ac-audit-log] Failed to load after snapshot for ${context.uid}: ${error.message}`
     );
-
     return result || null;
   }
 };
@@ -415,6 +409,7 @@ const buildEvidenceDiff = ({ action, before, after }) => {
 
 const register = ({ strapi }) => {
   strapi.server.use(requestContextMiddleware({ strapi }));
+  registerContentTypeBuilderEventAudit({ strapi });
 
   strapi.documents.use(async (context, next) => {
     if (!shouldAudit(context)) {
@@ -424,14 +419,15 @@ const register = ({ strapi }) => {
     const before = await getBeforeSnapshot(strapi, context);
     const result = await next();
     const after = await getAfterSnapshot(strapi, context, result);
-
     const requestContext = getRequestContext();
     const actor = resolveActor(requestContext, after || result);
+
     const diff = buildEvidenceDiff({
       action: context.action,
       before,
       after,
     });
+
     const evidenceDisplayMode = getEvidenceDisplayMode({
       action: context.action,
       before,
@@ -441,12 +437,10 @@ const register = ({ strapi }) => {
     const auditLogData = {
       action: `entry.${context.action || 'write'}`,
       category: 'entry',
-
       actorType: actor.actorType,
       actorId: actor.actorId,
       actorEmail: actor.actorEmail,
       actorDisplayName: actor.actorDisplayName,
-
       ip: requestContext.ip || null,
       userAgent: requestContext.userAgent || null,
       method: requestContext.method || null,
@@ -454,23 +448,18 @@ const register = ({ strapi }) => {
       statusCode: requestContext.statusCode || null,
       requestId: requestContext.requestId || null,
       requestBody: requestContext.requestBody || null,
-
       contentTypeUid: context.uid,
       targetDocumentId: getTargetDocumentId(context, after || result || before),
       targetEntityId: getTargetEntityId(after || result || before),
       targetLocale: getTargetLocale(context, after || result || before),
-
       payload: {
         params: context.params || {},
       },
-
       before,
       after,
       diff,
-
       metadata: {
-        contentTypeDisplayName:
-          context.contentType?.info?.displayName || null,
+        contentTypeDisplayName: context.contentType?.info?.displayName || null,
         populateDepth: getPopulateDepth(strapi),
         relationPopulatePolicy: 'one-level-only',
         actorResolutionPolicy:
@@ -483,14 +472,10 @@ const register = ({ strapi }) => {
       },
     };
 
-    setImmediate(async () => {
-      try {
-        await strapi.plugin('ac-audit-log').service('audit-log').createLog(auditLogData);
-      } catch (error) {
-        strapi.log.error(
-          `[ac-audit-log] Failed to create audit log: ${error.message}`
-        );
-      }
+    await enqueueAuditLogWrite({
+      strapi,
+      data: auditLogData,
+      source: 'document-middleware',
     });
 
     return result;

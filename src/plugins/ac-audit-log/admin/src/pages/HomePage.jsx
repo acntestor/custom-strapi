@@ -19,6 +19,12 @@ const DEFAULT_ACTION_OPTIONS = [
   { label: 'Delete entry', value: 'entry.delete' },
   { label: 'Publish entry', value: 'entry.publish' },
   { label: 'Unpublish entry', value: 'entry.unpublish' },
+  { label: 'Create content type', value: 'content-type.create' },
+  { label: 'Update content type', value: 'content-type.update' },
+  { label: 'Delete content type', value: 'content-type.delete' },
+  { label: 'Create component', value: 'component.create' },
+  { label: 'Update component', value: 'component.update' },
+  { label: 'Delete component', value: 'component.delete' },
 ];
 
 const DEFAULT_FILTER_OPTIONS = {
@@ -93,6 +99,10 @@ const getPageNumbers = (page, pageCount) => {
 
 const stringifyJson = (value) => {
   return JSON.stringify(value || null, null, 2);
+};
+
+const isSchemaEventPayloadLog = (log) => {
+  return log?.metadata?.evidenceDisplayMode === 'schema-event-payload';
 };
 
 const buildFilterFields = (filterOptions = DEFAULT_FILTER_OPTIONS) => {
@@ -812,18 +822,20 @@ const HomePage = () => {
                   />
                 </div>
 
-                <div style={styles.section}>
-                  <JsonPanel
-                    title="Snapshots / Diff"
-                    styles={styles}
-                    value={{
-                      before: selectedLog.before,
-                      after: selectedLog.after,
-                      diff: selectedLog.diff,
-                      metadata: selectedLog.metadata,
-                    }}
-                  />
-                </div>
+                {!isSchemaEventPayloadLog(selectedLog) ? (
+                  <div style={styles.section}>
+                    <JsonPanel
+                      title="Snapshots / Diff"
+                      styles={styles}
+                      value={{
+                        before: selectedLog.before,
+                        after: selectedLog.after,
+                        diff: selectedLog.diff,
+                        metadata: selectedLog.metadata,
+                      }}
+                    />
+                  </div>
+                ) : null}
               </div>
             </div>
           </div>

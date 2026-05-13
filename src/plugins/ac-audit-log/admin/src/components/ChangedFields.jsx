@@ -480,6 +480,28 @@ const PublicationEvent = ({ log, styles }) => {
     );
 };
 
+const SchemaEventPayload = ({ log, styles }) => {
+    const eventName = log?.metadata?.eventHubEvent || log?.action || 'schema event';
+    const entityKind = log?.metadata?.entityKind || 'schema entity';
+    const displayName =
+        log?.metadata?.contentTypeDisplayName ||
+        log?.metadata?.singularName ||
+        log?.metadata?.pluralName ||
+        log?.contentTypeUid ||
+        'Unknown schema entity';
+
+    return (
+        <div style={getStyle(styles, 'changedFieldsContainer')}>
+            <h3 style={getStyle(styles, 'changedFieldsTitle')}>Schema Event</h3>
+            <div style={getStyle(styles, 'diffEmpty')}>
+                A schema change was recorded for {entityKind}{' '}<strong>{displayName}</strong>.
+                Detailed field-by-field changes are not available for this type of event.
+                You can review the saved schema details in the payload section below.
+            </div>
+        </div>
+    );
+};
+
 const getArrayItemPosition = (entry, side) => {
     const arrayItem = entry?.metadata?.arrayItem;
 
@@ -563,6 +585,10 @@ export const ChangedFields = ({ log, styles }) => {
 
     if (displayMode === 'publication-event') {
         return <PublicationEvent log={log} styles={styles} />;
+    }
+
+    if (displayMode === 'schema-event-payload') {
+        return <SchemaEventPayload log={log} styles={styles} />;
     }
 
     if (displayMode === 'initial-values') {

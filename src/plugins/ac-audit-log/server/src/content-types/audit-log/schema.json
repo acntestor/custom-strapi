@@ -28,6 +28,7 @@
             "enum": [
                 "entry",
                 "content-type",
+                "component",
                 "media",
                 "auth",
                 "user",
