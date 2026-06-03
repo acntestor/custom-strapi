@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_custom_footer_column_items",
+  "info": {
+    "displayName": "Footer Column Items"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "sort": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}

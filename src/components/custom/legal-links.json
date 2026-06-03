@@ -1,0 +1,19 @@
+{
+  "collectionName": "components_custom_legal_links",
+  "info": {
+    "displayName": "Legal Links"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "sort": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}

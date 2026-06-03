@@ -1,0 +1,22 @@
+{
+  "collectionName": "components_custom_main_navigations",
+  "info": {
+    "displayName": "Main Navigation"
+  },
+  "options": {},
+  "attributes": {
+    "label": {
+      "type": "string"
+    },
+    "url": {
+      "type": "string"
+    },
+    "is_external": {
+      "type": "boolean"
+    },
+    "sort": {
+      "type": "integer"
+    }
+  },
+  "config": {}
+}
